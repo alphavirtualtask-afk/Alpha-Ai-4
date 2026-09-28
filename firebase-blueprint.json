@@ -1,0 +1,171 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile representation stored in Firestore",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The unique Firebase Auth UID of the user",
+          "maxLength": 128
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's registered email address",
+          "maxLength": 256
+        },
+        "displayName": {
+          "type": "string",
+          "description": "The user's full name",
+          "maxLength": 128
+        },
+        "phoneNumber": {
+          "type": "string",
+          "description": "The user's national phone number",
+          "maxLength": 64
+        },
+        "countryCode": {
+          "type": "string",
+          "description": "International dialing code of the user (e.g. +91, +1)",
+          "maxLength": 16
+        },
+        "countryIso": {
+          "type": "string",
+          "description": "Two-letter ISO country code (e.g. IN, US, GB)",
+          "maxLength": 8
+        },
+        "fullPhoneNumber": {
+          "type": "string",
+          "description": "Formatted international phone number with country calling code",
+          "maxLength": 64
+        },
+        "role": {
+          "type": "string",
+          "description": "The system role of the user",
+          "enum": ["client", "admin"]
+        },
+        "company": {
+          "type": "string",
+          "description": "Optional business or organization name",
+          "maxLength": 128
+        },
+        "status": {
+          "type": "string",
+          "description": "Account status of the client user",
+          "enum": ["Active", "Inactive", "Suspended"]
+        },
+        "accountStatus": {
+          "type": "string",
+          "description": "Account status alias",
+          "enum": ["Active", "Inactive", "Suspended"]
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO timestamp when the user profile was created"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "ISO timestamp when the user profile was last updated"
+        }
+      },
+      "required": ["id", "email", "displayName", "role"]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "Service request or booking submitted by a client",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The unique document ID for the booking",
+          "maxLength": 128
+        },
+        "userId": {
+          "type": "string",
+          "description": "The Firebase Auth UID of the user who made the booking",
+          "maxLength": 128
+        },
+        "clientName": {
+          "type": "string",
+          "description": "Full name of the client",
+          "maxLength": 128
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the client",
+          "maxLength": 256
+        },
+        "phone": {
+          "type": "string",
+          "description": "Contact phone number for the booking",
+          "maxLength": 64
+        },
+        "serviceName": {
+          "type": "string",
+          "description": "The requested service from the 14 service catalog options",
+          "maxLength": 128
+        },
+        "requirements": {
+          "type": "string",
+          "description": "Detailed project requirements or message",
+          "maxLength": 5000
+        },
+        "budgetEstimate": {
+          "type": "string",
+          "description": "Client's estimated budget range",
+          "maxLength": 128
+        },
+        "deadline": {
+          "type": "string",
+          "description": "Target completion date for the task",
+          "maxLength": 64
+        },
+        "status": {
+          "type": "string",
+          "description": "Current status of the booking or request",
+          "enum": ["New", "Quote Sent", "In Discussion", "Approved", "Completed", "Declined"]
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "ISO timestamp when the booking was created"
+        }
+      },
+      "required": ["id", "userId", "clientName", "email", "serviceName", "requirements", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Individual user profiles accessible by the owner and admins"
+    },
+    "/users/{userId}/projects/{projectId}": {
+      "schema": "Booking",
+      "description": "User specific projects isolated by Firebase UID"
+    },
+    "/users/{userId}/requests/{requestId}": {
+      "schema": "Booking",
+      "description": "User specific task requests isolated by Firebase UID"
+    },
+    "/users/{userId}/messages/{messageId}": {
+      "schema": "Booking",
+      "description": "User specific direct messaging isolated by Firebase UID"
+    },
+    "/users/{userId}/payments/{paymentId}": {
+      "schema": "Booking",
+      "description": "User specific payments isolated by Firebase UID"
+    },
+    "/users/{userId}/quotations/{quotationId}": {
+      "schema": "Booking",
+      "description": "User specific quotations isolated by Firebase UID"
+    },
+    "/users/{userId}/notifications/{notificationId}": {
+      "schema": "Booking",
+      "description": "User specific alerts and notifications isolated by Firebase UID"
+    },
+    "/bookings/{bookingId}": {
+      "schema": "Booking",
+      "description": "Service requests and task bookings created by authenticated clients"
+    }
+  }
+}

@@ -1,0 +1,133 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'alphavirtualtask@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidUser(data, userId) {
+      return data.keys().hasAll(['id', 'email', 'displayName', 'role']) &&
+             data.keys().hasOnly(['id', 'email', 'displayName', 'phoneNumber', 'countryCode', 'countryIso', 'fullPhoneNumber', 'role', 'company', 'status', 'accountStatus', 'createdAt', 'updatedAt']) &&
+             data.id is string && data.id == userId &&
+             data.email is string && data.email.size() <= 256 &&
+             data.displayName is string && data.displayName.size() <= 128 &&
+             data.role in ['client', 'admin'] &&
+             (!('status' in data) || (data.status is string && data.status in ['Active', 'Inactive', 'Suspended'])) &&
+             (!('accountStatus' in data) || (data.accountStatus is string && data.accountStatus in ['Active', 'Inactive', 'Suspended'])) &&
+             (!('phoneNumber' in data) || (data.phoneNumber is string && data.phoneNumber.size() <= 64)) &&
+             (!('countryCode' in data) || (data.countryCode is string && data.countryCode.size() <= 16)) &&
+             (!('countryIso' in data) || (data.countryIso is string && data.countryIso.size() <= 8)) &&
+             (!('fullPhoneNumber' in data) || (data.fullPhoneNumber is string && data.fullPhoneNumber.size() <= 64)) &&
+             (!('company' in data) || (data.company is string && data.company.size() <= 128));
+    }
+
+    function isValidBooking(data) {
+      return data.keys().hasAll(['id', 'userId', 'clientName', 'email', 'serviceName', 'requirements', 'status', 'createdAt']) &&
+             data.keys().hasOnly(['id', 'userId', 'clientName', 'email', 'phone', 'serviceName', 'requirements', 'budgetEstimate', 'deadline', 'status', 'createdAt']) &&
+             data.id is string && data.id.size() <= 128 &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.clientName is string && data.clientName.size() <= 128 &&
+             data.email is string && data.email.size() <= 256 &&
+             data.serviceName is string && data.serviceName.size() <= 128 &&
+             data.requirements is string && data.requirements.size() <= 5000 &&
+             data.status in ['New', 'Quote Sent', 'In Discussion', 'Approved', 'Completed', 'Declined'] &&
+             (!('phone' in data) || (data.phone is string && data.phone.size() <= 64)) &&
+             (!('budgetEstimate' in data) || (data.budgetEstimate is string && data.budgetEstimate.size() <= 128)) &&
+             (!('deadline' in data) || (data.deadline is string && data.deadline.size() <= 64));
+    }
+
+    // Users collection rules
+    match /users/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isValidId(userId) && (isOwner(userId) || isAdmin()) && isValidUser(incoming(), userId);
+      allow update: if isValidId(userId) && (isOwner(userId) || isAdmin()) && isValidUser(incoming(), userId);
+      allow delete: if isValidId(userId) && isAdmin();
+
+      // Subcollections organized under users/{uid}/...
+      // Projects, requests, quotations, payments, messages, notifications, dashboard
+      match /projects/{projectId} {
+        allow list: if isValidId(userId) && (isOwner(userId) || isAdmin());
+        allow get, write: if isValidId(userId) && isValidId(projectId) && (isOwner(userId) || isAdmin());
+      }
+
+      match /requests/{requestId} {
+        allow list: if isValidId(userId) && (isOwner(userId) || isAdmin());
+        allow get, write: if isValidId(userId) && isValidId(requestId) && (isOwner(userId) || isAdmin());
+      }
+
+      match /quotations/{quotationId} {
+        allow list: if isValidId(userId) && (isOwner(userId) || isAdmin());
+        allow get, write: if isValidId(userId) && isValidId(quotationId) && (isOwner(userId) || isAdmin());
+      }
+
+      match /payments/{paymentId} {
+        allow list: if isValidId(userId) && (isOwner(userId) || isAdmin());
+        allow get, write: if isValidId(userId) && isValidId(paymentId) && (isOwner(userId) || isAdmin());
+      }
+
+      match /messages/{messageId} {
+        allow list: if isValidId(userId) && (isOwner(userId) || isAdmin());
+        allow get, write: if isValidId(userId) && isValidId(messageId) && (isOwner(userId) || isAdmin());
+      }
+
+      match /notifications/{notificationId} {
+        allow list: if isValidId(userId) && (isOwner(userId) || isAdmin());
+        allow get, write: if isValidId(userId) && isValidId(notificationId) && (isOwner(userId) || isAdmin());
+      }
+
+      match /dashboard/{docId} {
+        allow list: if isValidId(userId) && (isOwner(userId) || isAdmin());
+        allow get, write: if isValidId(userId) && isValidId(docId) && (isOwner(userId) || isAdmin());
+      }
+    }
+
+    // Bookings collection rules
+    match /bookings/{bookingId} {
+      allow get: if isValidId(bookingId) && isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(bookingId) && isSignedIn() && incoming().userId == request.auth.uid && isValidBooking(incoming());
+      allow update: if isValidId(bookingId) && isSignedIn() && (
+        (resource.data.userId == request.auth.uid && incoming().userId == resource.data.userId && isValidBooking(incoming())) ||
+        isAdmin()
+      );
+      allow delete: if isValidId(bookingId) && isAdmin();
+    }
+
+    // Admin whitelist collection
+    match /admins/{adminId} {
+      allow read, write: if isValidId(adminId) && isAdmin();
+    }
+  }
+}

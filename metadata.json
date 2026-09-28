@@ -1,0 +1,8 @@
+{
+  "name": "Remix Alpha Virtual Task",
+  "description": "Premium virtual task partner providing accurate, reliable data processing, management, research, and virtual assistance.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
